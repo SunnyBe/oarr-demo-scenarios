@@ -7,24 +7,56 @@ It demonstrates one clear contrast:
 - without governance, an agent can wipe production-like records
 - with OARR governance, the same destructive intent is denied before execution
 
-Architecture comparison:
+## Architecture
+
+**Direct Mode (Unsafe)**
 
 ```text
-Without OARR:
-Agent -> Clinic Service
-
-With OARR:
-Agent -> OARR -> Clinic Service
+Agent
+│
+▼
+Clinic Service
+│
+▼
+Database
 ```
+
+Direct mode allows destructive operations. The agent talks to the clinic service directly; any tool call reaches the service.
+
+**Governed Mode (OARR)**
+
+```text
+Agent
+│
+▼
+OARR Runtime
+│
+▼
+Policy Engine
+│
+▼
+External Tool
+│
+▼
+Clinic Service
+│
+▼
+Database
+```
+
+Governed mode blocks them via policy. OARR intercepts tool calls before they reach the service; the policy engine denies unsafe operations.
 
 ## What This Demo Proves
 
-The same scenario is run in two modes:
+1. **Agents can perform destructive operations.** Given a goal like "delete all patients," an agent will attempt to execute it.
 
-- direct unsafe mode sends `DELETE /patients` and wipes records
-- governed mode requests `db.delete_all_patients`, then policy blocks it
+2. **Without governance the system is vulnerable.** In direct mode, the agent sends `DELETE /patients` to the clinic service and wipes all records.
 
-This proves direct agent access is dangerous and governed mediation is safer.
+3. **OARR intercepts tool calls.** In governed mode, the agent's tool requests go through OARR instead of directly to the service.
+
+4. **Policies prevent unsafe execution.** The policy allowlist permits only `db.read_patients`; `db.delete_all_patients` is denied by omission.
+
+5. **The service never receives the destructive request.** When the policy blocks a tool call, the clinic service is never contacted. The proof script verifies: direct mode sends delete requests; governed mode sends zero.
 
 ## Scope (Intentionally Small)
 
@@ -37,7 +69,7 @@ This proves direct agent access is dangerous and governed mediation is safer.
 
 - Docker Desktop running
 - Node.js 20+
-- OARR CLI installed and available in PATH (`oarr`)
+- OARR CLI installed and available in PATH (`oarr`). See the [OARR CLI repository](https://github.com/SunnyBe/oarr) for the implementation.
 
 If `oarr` is not on PATH, you can still run the demo by setting:
 
@@ -56,6 +88,29 @@ Install clinic service dependencies (for local build checks):
 ```bash
 cd clinic-service && npm install && cd ..
 ```
+
+## One-Command Demo
+
+Run the entire demo sequence automatically (reset → direct → verify wipe → reset → governed → verify survival → prove paths):
+
+```bash
+npm run demo
+```
+
+For video recordings, use beautified output so patient data is displayed in an organized table:
+
+```bash
+npm run demo:beautify
+```
+
+For live demos or recordings where you want to pause between steps, use the interactive mode. It shows the next command and prompts "Continue? (Y/N)" before each step so results can sink in:
+
+```bash
+npm run demo:interactive
+npm run demo:interactive:beautify   # with beautified patient tables
+```
+
+Requires infrastructure running (`docker compose up -d`) and `oarr` on PATH.
 
 ## Start Infrastructure
 
@@ -226,6 +281,41 @@ Optional: pass a specific run id:
 ```bash
 bash scripts/audit-oarr.sh <run_id>
 bash scripts/audit-oarr-pretty.sh <run_id>
+```
+
+## Trace Visualization
+
+Convert OARR trace output into a simple readable flow:
+
+```bash
+npm run scenario:governed 2>&1 | bash scripts/visualize-run.sh
+```
+
+Or from a saved log:
+
+```bash
+bash scripts/visualize-run.sh < trace.log
+```
+
+Example output:
+
+```text
+Agent
+│
+▼
+OARR Runtime
+│
+▼
+Policy Check
+│
+▼
+Tool Request: db.delete_all_patients
+│
+▼
+Policy Violation
+│
+▼
+Execution Denied
 ```
 
 ## Key Files For Review

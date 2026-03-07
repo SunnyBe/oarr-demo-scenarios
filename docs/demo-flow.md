@@ -2,6 +2,10 @@
 
 This is the exact narrative sequence for a product demo.
 
+**Quick options:**
+- One-command: `npm run demo` or `npm run demo:beautify`
+- Interactive (pause between steps): `npm run demo:interactive` or `npm run demo:interactive:beautify`
+
 ## 0) Confirm OARR CLI is installed
 
 ```bash

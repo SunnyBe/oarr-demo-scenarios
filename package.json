@@ -12,7 +12,11 @@
     "verify:patients:beautify": "bash scripts/verify-patients-pretty.sh",
     "verify:patients:beutify": "bash scripts/verify-patients-pretty.sh",
     "reset:db": "bash scripts/reset-db.sh",
-    "prove:paths": "bash scripts/prove-request-paths.sh"
+    "prove:paths": "bash scripts/prove-request-paths.sh",
+    "demo": "bash scripts/demo.sh",
+    "demo:beautify": "BEAUTIFY=1 bash scripts/demo.sh",
+    "demo:interactive": "bash scripts/demo-interactive.sh",
+    "demo:interactive:beautify": "BEAUTIFY=1 bash scripts/demo-interactive.sh"
   },
   "devDependencies": {
     "@types/node": "^24.5.2",

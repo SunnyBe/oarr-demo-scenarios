@@ -26,6 +26,9 @@ pnpm-debug.log*
 tmp/
 temp/
 
+# Internal handoff (not for public repo)
+docs/IMPLEMENTER_HANDOFF.md
+
 # OS/editor artifacts
 .DS_Store
 .idea/
