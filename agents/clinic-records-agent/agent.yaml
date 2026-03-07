@@ -1,0 +1,6 @@
+name: clinic-records-agent
+version: "1.0.0"
+model: gpt-4o-mini
+system_prompt_file: prompts/system.txt
+input_schema_file: schemas/input.schema.json
+output_schema_file: schemas/output.schema.json

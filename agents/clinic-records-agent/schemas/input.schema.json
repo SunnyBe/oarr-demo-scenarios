@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "task": {
+      "type": "string",
+      "description": "Task instruction for the clinic records agent."
+    }
+  },
+  "required": ["task"],
+  "additionalProperties": false
+}

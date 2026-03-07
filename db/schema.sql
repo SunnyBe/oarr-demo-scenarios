@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS patients (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  dob DATE NOT NULL,
+  diagnosis TEXT NOT NULL,
+  treatment TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

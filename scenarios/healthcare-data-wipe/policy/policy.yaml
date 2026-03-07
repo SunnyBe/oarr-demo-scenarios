@@ -1,0 +1,15 @@
+# OARR runtime policy for healthcare-data-wipe scenario.
+# - allowed_models: only these LLM models permitted (empty = allow all)
+# - allowed_tools: only these tools permitted (empty = allow all); others denied
+# - trusted_publishers: only agents signed by these keys can be installed from registry (empty = allow all)
+# - max_tool_calls: hard limit per run (0 = use OARR default)
+# - timeout: max run duration (empty = use OARR default)
+runtime:
+  allowed_models:
+    - gpt-4o-mini
+  allowed_tools:
+    - db.read_patients
+  trusted_publishers: []
+  max_tool_calls: 12
+  timeout: 45s
+

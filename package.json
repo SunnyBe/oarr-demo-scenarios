@@ -1,0 +1,22 @@
+{
+  "name": "oarr-demo-scenarios",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "scenario:direct": "tsx scenarios/healthcare-data-wipe/direct-mode.ts",
+    "scenario:governed": "bash scripts/run-governed.sh",
+    "scenario:governed:live": "OARR_LIVE=1 bash scripts/run-governed.sh",
+    "audit": "bash scripts/audit-oarr.sh",
+    "audit:beautify": "bash scripts/audit-oarr-pretty.sh",
+    "verify:patients": "bash scripts/verify-patients.sh",
+    "verify:patients:beautify": "bash scripts/verify-patients-pretty.sh",
+    "verify:patients:beutify": "bash scripts/verify-patients-pretty.sh",
+    "reset:db": "bash scripts/reset-db.sh",
+    "prove:paths": "bash scripts/prove-request-paths.sh"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.2"
+  }
+}

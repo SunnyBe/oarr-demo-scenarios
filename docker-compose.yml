@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: oarr-demo-db
+    environment:
+      POSTGRES_DB: clinic
+      POSTGRES_USER: clinic
+      POSTGRES_PASSWORD: clinic
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clinic -d clinic"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+
+  clinic-service:
+    build:
+      context: ./clinic-service
+    container_name: oarr-demo-clinic-service
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgres://clinic:clinic@db:5432/clinic
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"

@@ -1,0 +1,30 @@
+tools:
+  - name: db.read_patients
+    module: ./db.read_patients.mjs
+    description: Read all patient records
+    input_schema:
+      type: object
+      properties: {}
+      additionalProperties: false
+
+  - name: db.delete_patient
+    module: ./db.delete_patient.mjs
+    description: Delete one patient record
+    input_schema:
+      type: object
+      properties:
+        id:
+          anyOf:
+            - type: number
+            - type: string
+      required:
+        - id
+      additionalProperties: false
+
+  - name: db.delete_all_patients
+    module: ./db.delete_all_patients.mjs
+    description: Delete all patient records
+    input_schema:
+      type: object
+      properties: {}
+      additionalProperties: false
