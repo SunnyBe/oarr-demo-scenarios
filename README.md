@@ -179,6 +179,162 @@ Expected:
 
 ---
 
+## Bring your own agent
+
+This section is for engineers who want to test their own agent against the OARR runtime, using this demo's infrastructure as a sandbox.
+
+The clinic service (Express + Postgres) is already set up here. You can point your own agent at it, define your own tools, write a policy, and run it through OARR — without building any backend.
+
+---
+
+### How the agent protocol works
+
+OARR launches your agent as a subprocess and communicates over **stdin/stdout using newline-delimited JSON**. Your agent does not call tools directly — it requests them from the runtime, and OARR decides whether to allow or deny them based on your policy.
+
+The message flow:
+
+```text
+OARR  → agent    runtime.start
+agent → OARR     tool.call       { name, arguments }
+OARR  → agent    tool.result     { ... }   or   error  { reason, ... }
+agent → OARR     llm.request     { model, messages, ... }   (optional)
+OARR  → agent    llm.response    { content, ... }
+agent → OARR     agent.result    { ... }
+```
+
+Your agent reads from `process.stdin` and writes to `process.stdout`. See [scenarios/healthcare-data-wipe/governed-agent.mjs](scenarios/healthcare-data-wipe/governed-agent.mjs) for a complete working example of this pattern.
+
+---
+
+### Write a tool module
+
+Each tool is a `.mjs` file that exports a default object with `name`, `description`, `inputSchema`, and `execute`:
+
+```js
+// my-tool.mjs
+export default {
+  name: "my.tool_name",
+  description: "What this tool does",
+  inputSchema: {
+    type: "object",
+    properties: {
+      id: { type: "string" }
+    },
+    required: ["id"],
+    additionalProperties: false
+  },
+  execute: async (input) => {
+    // do the work, return a plain object
+    return { result: "ok", id: input.id };
+  }
+};
+```
+
+The clinic service runs at `http://localhost:3000` and exposes these endpoints you can call from any tool:
+
+| Endpoint | Description |
+| --- | --- |
+| `GET /patients` | List all patient records |
+| `DELETE /patients` | Delete all patient records |
+| `DELETE /patients/:id` | Delete one patient by ID |
+| `GET /health` | Health check |
+
+See [tools/governed/db.read_patients.mjs](tools/governed/db.read_patients.mjs) for a minimal working example.
+
+---
+
+### Declare your tools
+
+Create a `tools.yaml` in any directory and point OARR at it with `--tools-dir`:
+
+```yaml
+tools:
+  - name: my.tool_name
+    module: ./my-tool.mjs
+    description: What this tool does
+    input_schema:
+      type: object
+      properties:
+        id:
+          type: string
+      required:
+        - id
+      additionalProperties: false
+```
+
+See [tools/governed/tools.yaml](tools/governed/tools.yaml) for a working reference.
+
+---
+
+### Write a policy
+
+Policies control what your agent is allowed to do at runtime. Create a `policy.yaml`:
+
+```yaml
+runtime:
+  allowed_models:
+    - gpt-4o-mini        # which LLM models the agent may request
+  allowed_tools:
+    - my.tool_name       # tools not listed here are denied by default
+  max_tool_calls: 10     # hard cap per run
+  timeout: 30s           # max run duration
+```
+
+Omit `allowed_tools` entirely to allow all tools. Leave `allowed_models` empty to allow any model.
+
+See [scenarios/healthcare-data-wipe/policy/policy.yaml](scenarios/healthcare-data-wipe/policy/policy.yaml) for a working reference.
+
+---
+
+### Run your agent through OARR
+
+```bash
+oarr run node path/to/your-agent.mjs \
+  --policy path/to/policy.yaml \
+  --tools-dir path/to/tools-dir \
+  --trace-stdout \
+  --non-interactive
+```
+
+For live LLM calls:
+
+```bash
+export OPENAI_API_KEY=sk-...
+OARR_LIVE=1 oarr run node path/to/your-agent.mjs \
+  --policy path/to/policy.yaml \
+  --tools-dir path/to/tools-dir \
+  --trace-stdout \
+  --non-interactive
+```
+
+To confirm your `oarr` binary supports all required flags:
+
+```bash
+oarr run --help
+```
+
+Look for: `--tools`, `--tools-dir`, `--policy`, `--trace-stdout`.
+
+---
+
+### Audit the trace from your run
+
+After any run, OARR stores a trace in `.oarr/traces.db`. View the latest:
+
+```bash
+npm run audit
+npm run audit:beautify
+```
+
+Or pass a specific run ID:
+
+```bash
+bash scripts/audit-oarr.sh <run_id>
+bash scripts/audit-oarr-pretty.sh <run_id>
+```
+
+---
+
 ## Live mode (uses a real LLM)
 
 To have the agent make an actual LLM call during the governed scenario, set your OpenAI API key first:
