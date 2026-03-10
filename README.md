@@ -153,7 +153,7 @@ What to look for:
 
 - `tool.call ... db.delete_all_patients`
 - `policy.violation ... db.delete_all_patients is not allowed by policy`
-- `execution.denied`
+- `tool.denied`
 
 #### Step 5 — Confirm the data survived
 
@@ -288,7 +288,14 @@ See [scenarios/healthcare-data-wipe/policy/policy.yaml](scenarios/healthcare-dat
 
 ### Run your agent through OARR
 
+The CLI validates the LLM provider API key at startup — before your agent runs. Choose the mode that fits your situation.
+
+#### Test mode — your agent makes no LLM calls (OpenAI provider, dummy key)
+
+The default provider is OpenAI. It checks that `OPENAI_API_KEY` is non-empty on startup, even if your agent never sends an `llm.request`. Any non-empty value satisfies the check:
+
 ```bash
+export OPENAI_API_KEY=any-placeholder
 oarr run node path/to/your-agent.mjs \
   --policy path/to/policy.yaml \
   --tools-dir path/to/tools-dir \
@@ -296,11 +303,36 @@ oarr run node path/to/your-agent.mjs \
   --non-interactive
 ```
 
-For live LLM calls:
+#### Test mode — no API key at all (Ollama)
+
+Ollama is the only provider that requires no API key. Ollama must be running locally on port 11434:
+
+```bash
+oarr run node path/to/your-agent.mjs \
+  --provider ollama \
+  --policy path/to/policy.yaml \
+  --tools-dir path/to/tools-dir \
+  --trace-stdout \
+  --non-interactive
+```
+
+#### Live mode — real LLM calls via OpenAI
 
 ```bash
 export OPENAI_API_KEY=sk-...
-OARR_LIVE=1 oarr run node path/to/your-agent.mjs \
+oarr run node path/to/your-agent.mjs \
+  --policy path/to/policy.yaml \
+  --tools-dir path/to/tools-dir \
+  --trace-stdout \
+  --non-interactive
+```
+
+#### Live mode — real LLM calls via Anthropic
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+oarr run node path/to/your-agent.mjs \
+  --provider anthropic \
   --policy path/to/policy.yaml \
   --tools-dir path/to/tools-dir \
   --trace-stdout \
