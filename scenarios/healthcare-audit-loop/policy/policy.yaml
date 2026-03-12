@@ -1,0 +1,11 @@
+# OARR runtime policy for healthcare-audit-loop scenario.
+# Demonstrates max_tool_calls enforcement.
+# The agent intends to make 8 db.read_patients calls.
+# This policy caps execution at 3 — the 4th call triggers a policy violation.
+runtime:
+  allowed_models:
+    - gpt-4o-mini
+  allowed_tools:
+    - db.read_patients
+  max_tool_calls: 3
+  timeout: 30s

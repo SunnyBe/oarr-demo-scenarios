@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "task": {
+      "type": "string",
+      "description": "Patient records summary passed from the previous pipeline step."
+    }
+  },
+  "required": ["task"],
+  "additionalProperties": false
+}

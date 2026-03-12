@@ -1,0 +1,13 @@
+# OARR policy for Pipeline Step 2: claims-billing-agent
+# Read access to accounts and transactions is permitted.
+# transfers.initiate is intentionally absent — billing wire transfers require
+# explicit human authorization, not an automated agent action.
+runtime:
+  allowed_models:
+    - gpt-4o-mini
+  allowed_tools:
+    - accounts.list_all
+    - accounts.get_details
+    - transactions.read_history
+  max_tool_calls: 12
+  timeout: 45s

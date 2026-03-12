@@ -1,22 +1,45 @@
 {
   "name": "oarr-demo-scenarios",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
+    "reset:all": "bash scripts/reset-all.sh",
+    "reset:db": "bash scripts/reset-db.sh",
+    "reset:bank": "bash scripts/reset-bank-db.sh",
+
+    "verify:patients": "bash scripts/verify-patients.sh",
+    "verify:patients:beautify": "bash scripts/verify-patients-pretty.sh",
+    "verify:accounts": "bash scripts/verify-accounts.sh",
+    "verify:accounts:beautify": "bash scripts/verify-accounts-pretty.sh",
+
+    "audit": "bash scripts/audit-oarr.sh",
+    "audit:beautify": "bash scripts/audit-oarr-pretty.sh",
+
     "scenario:direct": "tsx scenarios/healthcare-data-wipe/direct-mode.ts",
     "scenario:governed": "bash scripts/run-governed.sh",
     "scenario:governed:live": "OARR_LIVE=1 bash scripts/run-governed.sh",
-    "audit": "bash scripts/audit-oarr.sh",
-    "audit:beautify": "bash scripts/audit-oarr-pretty.sh",
-    "verify:patients": "bash scripts/verify-patients.sh",
-    "verify:patients:beautify": "bash scripts/verify-patients-pretty.sh",
-    "verify:patients:beutify": "bash scripts/verify-patients-pretty.sh",
-    "reset:db": "bash scripts/reset-db.sh",
     "prove:paths": "bash scripts/prove-request-paths.sh",
-    "demo": "bash scripts/demo.sh",
-    "demo:beautify": "BEAUTIFY=1 bash scripts/demo.sh",
-    "demo:interactive": "bash scripts/demo-interactive.sh",
-    "demo:interactive:beautify": "BEAUTIFY=1 bash scripts/demo-interactive.sh"
+
+    "s2:direct": "tsx scenarios/healthcare-audit-loop/direct-mode.ts",
+    "s2:governed": "bash scripts/run-governed-s2.sh",
+
+    "s3:direct": "tsx scenarios/financial-unauthorized-transfer/direct-mode.ts",
+    "s3:governed": "bash scripts/run-governed-s3.sh",
+    "prove:bank:paths": "bash scripts/prove-bank-paths.sh",
+
+    "s4:direct": "tsx scenarios/multi-agent-claims-pipeline/direct-mode.ts",
+    "s4:governed": "bash scripts/run-governed-s4.sh",
+
+    "demo:s1": "INTERACTIVE=0 bash scripts/demo-s1.sh",
+    "demo:s1:interactive": "INTERACTIVE=1 bash scripts/demo-s1.sh",
+    "demo:s2": "INTERACTIVE=0 bash scripts/demo-s2.sh",
+    "demo:s2:interactive": "INTERACTIVE=1 bash scripts/demo-s2.sh",
+    "demo:s3": "INTERACTIVE=0 bash scripts/demo-s3.sh",
+    "demo:s3:interactive": "INTERACTIVE=1 bash scripts/demo-s3.sh",
+    "demo:s4": "INTERACTIVE=0 bash scripts/demo-s4.sh",
+    "demo:s4:interactive": "INTERACTIVE=1 bash scripts/demo-s4.sh",
+    "demo:all": "INTERACTIVE=0 bash scripts/demo-all.sh",
+    "demo:all:interactive": "INTERACTIVE=1 bash scripts/demo-all.sh"
   },
   "devDependencies": {
     "@types/node": "^24.5.2",

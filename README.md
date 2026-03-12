@@ -1,423 +1,246 @@
 # OARR Demo Scenarios
 
-> **Heads up:** This is a local demo environment. Everything runs on your machine inside Docker. No data leaves your system.
+> This is a local demo environment. Everything runs on your machine inside Docker. No data leaves your system.
 
-This repository lets you run a live proof of what happens when an AI agent tries to delete all patient records — once without governance, and once with [OARR](https://oarr-website.vercel.app) in place.
+This repository contains four production-grade demo scenarios that prove what OARR — Open Agent Runtime & Registry — does when AI agents operate on real systems.
 
-**Without OARR:** the agent calls `DELETE /patients`. The records are gone.
-**With OARR:** the policy intercepts the tool call before it reaches the service. The records survive.
-
-Visit [oarr-website.vercel.app](https://oarr-website.vercel.app) to learn more about the project.
+Each scenario shows the same pattern: the agent runs once without governance (the damage happens), then again under OARR (the damage is blocked). The proof is always structural — Docker logs, database state, and OARR's own audit trail confirm what occurred.
 
 ---
 
-## What you need before starting
+## The Four Scenarios
 
-- **Docker Desktop** — running
+### Scenario 1 — Healthcare Data Wipe
+
+An AI agent is given access to a clinic records system. Its task: delete all patient records. Without governance, it does exactly that. Under OARR, the `db.delete_all_patients` tool call is intercepted before it reaches the service. The clinic database never receives a DELETE request.
+
+**What it demonstrates:** `allowed_tools` enforcement. One policy line blocks a destructive action at the runtime boundary.
+
+### Scenario 2 — Runaway Audit Loop
+
+A compliance audit agent spirals into repeated reads — re-reading the same patient records to "verify" and "cross-reference" in a loop. In production, every tool call costs API tokens and database load. Without governance, all 8 calls succeed. Under OARR, the `max_tool_calls: 3` policy stops the agent at the 4th call, emitting a `policy.violation` trace event.
+
+**What it demonstrates:** Budget enforcement. OARR tracks every call and cuts the agent off at the configured limit.
+
+### Scenario 3 — Unauthorized Wire Transfer
+
+A portfolio management agent reads client account balances and initiates a $47,250 wire transfer across client accounts — without authorization. Under OARR, read tools are allowed while `transfers.initiate` is not. The bank service never receives the POST request. Account balances are unchanged.
+
+**What it demonstrates:** Data exfiltration and fund movement prevention. Read access can be granted without granting write access — even to the same agent.
+
+### Scenario 4 — Multi-Agent Claims Pipeline
+
+A hospital deploys a two-agent pipeline to automate insurance claims. Agent 1 reads patient records from the clinic system. Agent 2 receives that data and initiates a $1,750 billing transfer. Without governance, the pipeline completes end-to-end. Under OARR, each agent is governed independently: Step 1 passes, Step 2 is blocked at the billing transfer call.
+
+**What it demonstrates:** Cross-domain, multi-agent governance. OARR applies policy per agent and per step — even in coordinated pipelines that span domain boundaries.
+
+---
+
+## Requirements
+
+- **Docker Desktop** running
 - **Node.js 20+**
-- **The `oarr` CLI** — see [Getting the oarr CLI](#getting-the-oarr-cli) below
+- **The `oarr` CLI** — see below
 
 ---
 
-## Getting the oarr CLI
+## Getting the `oarr` CLI
 
-The `oarr` CLI is currently in **private beta**. To try this demo with real OARR governance, you need access to the binary.
+The `oarr` CLI is currently in private beta. To run the governed scenarios you need the binary.
 
 ### Option A — Request beta access
 
-Open an issue or reach out via [github.com/SunnyBe/oarr](https://github.com/SunnyBe/oarr) to request access to the private beta. Once approved, you will receive installation instructions.
+Reach out via [github.com/SunnyBe/oarr](https://github.com/SunnyBe/oarr) to request access. Once approved you will receive installation instructions.
 
 ### Option B — Point to a local binary
 
-If you already have the `oarr` binary built or distributed to you, you can skip installing it system-wide:
+If you already have the binary:
 
 ```bash
 export OARR_BIN=/absolute/path/to/oarr
 ```
 
-Set this before running any `scenario:governed` commands.
+Set this before running any governed scenario commands.
 
-> **Without `oarr`:** You can still run the direct (unsafe) scenario — it has no dependency on the CLI. Only the governed scenario requires `oarr`.
+> Without `oarr` you can still run all direct (uncontrolled) scenarios — they have no CLI dependency.
 
 ---
 
 ## Setup
 
-### 1. Clone this repository
-
 ```bash
 git clone https://github.com/SunnyBe/oarr-demo-scenarios.git
 cd oarr-demo-scenarios
-```
-
-### 2. Install dependencies
-
-```bash
 npm install
-cd clinic-service && npm install && cd ..
 ```
 
-### 3. Start the infrastructure
-
-This starts a Postgres database and the clinic HTTP service inside Docker:
+Start all services (clinic and bank):
 
 ```bash
 docker compose up --build -d
 ```
 
-Wait a few seconds, then confirm the service is healthy:
+Verify both are healthy:
 
 ```bash
-curl -s http://localhost:3000/health
-```
-
-You should see a `200 OK` response. If the service isn't up yet, wait 5–10 seconds and try again.
-
-### 4. Verify the seed data
-
-```bash
-npm run verify:patients
-```
-
-Expected output: `verify.patient_count 5`
-
----
-
-## Running the demo
-
-### One command (recommended for first run)
-
-This runs the full sequence automatically: reset → direct wipe → verify wipe → reset → governed block → verify survival → proof.
-
-```bash
-npm run demo
-```
-
-For a nicer table view of patient data:
-
-```bash
-npm run demo:beautify
-```
-
-For a presentation or recording where you want to pause between steps:
-
-```bash
-npm run demo:interactive
-npm run demo:interactive:beautify
+curl http://localhost:3100/health   # clinic-service
+curl http://localhost:3101/health   # bank-service
 ```
 
 ---
 
-### Step by step (if you want to follow along)
+## Running the Demo
 
-#### Step 1 — Run direct unsafe mode
-
-The agent talks directly to the clinic service with no policy in between:
+### Full suite — all four scenarios
 
 ```bash
-npm run scenario:direct
+npm run demo:all
 ```
 
-What to look for:
-
-- `agent.request delete all patients`
-- `direct.api_call DELETE /patients`
-- `result.success deleted=5`
-
-#### Step 2 — Confirm the data is gone
+With pauses between steps (recommended for live recording):
 
 ```bash
-npm run verify:patients
+npm run demo:all:interactive
 ```
 
-Expected: `verify.patient_count 0`
-
-#### Step 3 — Reset the database
+### Individual scenarios
 
 ```bash
-npm run reset:db
-npm run verify:patients
+npm run demo:s1              # Healthcare Data Wipe
+npm run demo:s2              # Runaway Audit Loop
+npm run demo:s3              # Unauthorized Wire Transfer
+npm run demo:s4              # Multi-Agent Claims Pipeline
 ```
 
-Expected: `verify.patient_count 5` — back to the starting state.
-
-#### Step 4 — Run governed OARR mode
+Add `:interactive` to any scenario for a paused, step-by-step experience:
 
 ```bash
-npm run scenario:governed
+npm run demo:s3:interactive
 ```
 
-OARR intercepts `db.delete_all_patients` before it reaches the service. The policy only allows `db.read_patients`, so the deletion is denied.
-
-What to look for:
-
-- `tool.call ... db.delete_all_patients`
-- `policy.violation ... db.delete_all_patients is not allowed by policy`
-- `tool.denied`
-
-#### Step 5 — Confirm the data survived
+### Run components directly
 
 ```bash
-npm run verify:patients
+# Scenario 1
+npm run scenario:direct        # direct (uncontrolled) run
+npm run scenario:governed      # governed run via OARR
+
+# Scenario 2
+npm run s2:direct
+npm run s2:governed
+
+# Scenario 3
+npm run s3:direct
+npm run s3:governed
+
+# Scenario 4
+npm run s4:direct
+npm run s4:governed
 ```
-
-Expected: `verify.patient_count 5` — the records are untouched.
-
-#### Step 6 — Prove the service boundary
-
-This checks Docker logs to confirm that in direct mode the service received a `DELETE` request, and in governed mode it received zero:
-
-```bash
-npm run prove:paths
-```
-
-Expected:
-
-- `proof.direct.delete_calls_to_service 1`
-- `proof.governed.delete_calls_to_service 0`
-- `proof.result passed`
 
 ---
 
-## Bring your own agent
+## Resetting Services
 
-This section is for engineers who want to test their own agent against the OARR runtime, using this demo's infrastructure as a sandbox.
-
-The clinic service (Express + Postgres) is already set up here. You can point your own agent at it, define your own tools, write a policy, and run it through OARR — without building any backend.
+```bash
+npm run reset:db       # clinic only (Scenarios 1, 2)
+npm run reset:bank     # bank only (Scenario 3)
+npm run reset:all      # everything (Scenario 4, or before a full run)
+```
 
 ---
 
-### How the agent protocol works
+## Verifying State
 
-OARR launches your agent as a subprocess and communicates over **stdin/stdout using newline-delimited JSON**. Your agent does not call tools directly — it requests them from the runtime, and OARR decides whether to allow or deny them based on your policy.
-
-The message flow:
-
-```text
-OARR  → agent    runtime.start
-agent → OARR     tool.call       { name, arguments }
-OARR  → agent    tool.result     { ... }   or   error  { reason, ... }
-agent → OARR     llm.request     { model, messages, ... }   (optional)
-OARR  → agent    llm.response    { content, ... }
-agent → OARR     agent.result    { ... }
+```bash
+npm run verify:patients:beautify    # table view of clinic patient records
+npm run verify:accounts:beautify    # table view of bank account balances
 ```
-
-Your agent reads from `process.stdin` and writes to `process.stdout`. See [scenarios/healthcare-data-wipe/governed-agent.mjs](scenarios/healthcare-data-wipe/governed-agent.mjs) for a complete working example of this pattern.
 
 ---
 
-### Write a tool module
+## Audit Trail
 
-Each tool is a `.mjs` file that exports a default object with `name`, `description`, `inputSchema`, and `execute`:
-
-```js
-// my-tool.mjs
-export default {
-  name: "my.tool_name",
-  description: "What this tool does",
-  inputSchema: {
-    type: "object",
-    properties: {
-      id: { type: "string" }
-    },
-    required: ["id"],
-    additionalProperties: false
-  },
-  execute: async (input) => {
-    // do the work, return a plain object
-    return { result: "ok", id: input.id };
-  }
-};
-```
-
-The clinic service runs at `http://localhost:3000` and exposes these endpoints you can call from any tool:
-
-| Endpoint | Description |
-| --- | --- |
-| `GET /patients` | List all patient records |
-| `DELETE /patients` | Delete all patient records |
-| `DELETE /patients/:id` | Delete one patient by ID |
-| `GET /health` | Health check |
-
-See [tools/governed/db.read_patients.mjs](tools/governed/db.read_patients.mjs) for a minimal working example.
-
----
-
-### Declare your tools
-
-Create a `tools.yaml` in any directory and point OARR at it with `--tools-dir`:
-
-```yaml
-tools:
-  - name: my.tool_name
-    module: ./my-tool.mjs
-    description: What this tool does
-    input_schema:
-      type: object
-      properties:
-        id:
-          type: string
-      required:
-        - id
-      additionalProperties: false
-```
-
-See [tools/governed/tools.yaml](tools/governed/tools.yaml) for a working reference.
-
----
-
-### Write a policy
-
-Policies control what your agent is allowed to do at runtime. Create a `policy.yaml`:
-
-```yaml
-runtime:
-  allowed_models:
-    - gpt-4o-mini        # which LLM models the agent may request
-  allowed_tools:
-    - my.tool_name       # tools not listed here are denied by default
-  max_tool_calls: 10     # hard cap per run
-  timeout: 30s           # max run duration
-```
-
-Omit `allowed_tools` entirely to allow all tools. Leave `allowed_models` empty to allow any model.
-
-See [scenarios/healthcare-data-wipe/policy/policy.yaml](scenarios/healthcare-data-wipe/policy/policy.yaml) for a working reference.
-
----
-
-### Run your agent through OARR
-
-The CLI validates the LLM provider API key at startup — before your agent runs. Choose the mode that fits your situation.
-
-#### Test mode — your agent makes no LLM calls (OpenAI provider, dummy key)
-
-The default provider is OpenAI. It checks that `OPENAI_API_KEY` is non-empty on startup, even if your agent never sends an `llm.request`. Any non-empty value satisfies the check:
+Every OARR run writes structured events to `.oarr/traces.db`. View the latest run:
 
 ```bash
-export OPENAI_API_KEY=any-placeholder
-oarr run node path/to/your-agent.mjs \
-  --policy path/to/policy.yaml \
-  --tools-dir path/to/tools-dir \
-  --trace-stdout \
-  --non-interactive
-```
-
-#### Test mode — no API key at all (Ollama)
-
-Ollama is the only provider that requires no API key. Ollama must be running locally on port 11434:
-
-```bash
-oarr run node path/to/your-agent.mjs \
-  --provider ollama \
-  --policy path/to/policy.yaml \
-  --tools-dir path/to/tools-dir \
-  --trace-stdout \
-  --non-interactive
-```
-
-#### Live mode — real LLM calls via OpenAI
-
-```bash
-export OPENAI_API_KEY=sk-...
-oarr run node path/to/your-agent.mjs \
-  --policy path/to/policy.yaml \
-  --tools-dir path/to/tools-dir \
-  --trace-stdout \
-  --non-interactive
-```
-
-#### Live mode — real LLM calls via Anthropic
-
-```bash
-export ANTHROPIC_API_KEY=sk-ant-...
-oarr run node path/to/your-agent.mjs \
-  --provider anthropic \
-  --policy path/to/policy.yaml \
-  --tools-dir path/to/tools-dir \
-  --trace-stdout \
-  --non-interactive
-```
-
-To confirm your `oarr` binary supports all required flags:
-
-```bash
-oarr run --help
-```
-
-Look for: `--tools`, `--tools-dir`, `--policy`, `--trace-stdout`.
-
----
-
-### Audit the trace from your run
-
-After any run, OARR stores a trace in `.oarr/traces.db`. View the latest:
-
-```bash
-npm run audit
 npm run audit:beautify
 ```
 
-Or pass a specific run ID:
+This shows event counts, timestamps, policy violations, and the full ARP message timeline. The `policy.violation` event proves the tool call was intercepted — not just logged after the fact.
+
+---
+
+## Service Boundary Proof
+
+For Scenario 1 and Scenario 3, dedicated proof scripts confirm the service never received the blocked request:
 
 ```bash
-bash scripts/audit-oarr.sh <run_id>
-bash scripts/audit-oarr-pretty.sh <run_id>
+npm run prove:paths           # Scenario 1: counts DELETE /patients in clinic logs
+npm run prove:bank:paths      # Scenario 3: counts POST /transfers in bank logs
+```
+
+Expected: direct run ≥1 call, governed run 0 calls.
+
+---
+
+## Infrastructure
+
+| Service | Port | Purpose |
+| --- | --- | --- |
+| clinic-service | 3000 | Express + Postgres — patient records API |
+| bank-service | 3001 | Express + Postgres — accounts and transfers API |
+| clinic-db | 5432 | Postgres 16 — 5 seeded patient records |
+| bank-db | 5433 | Postgres 16 — 6 seeded accounts, transaction history |
+
+---
+
+## Project Layout
+
+```text
+scenarios/
+├── healthcare-data-wipe/           # Scenario 1
+├── healthcare-audit-loop/          # Scenario 2
+├── financial-unauthorized-transfer/# Scenario 3
+└── multi-agent-claims-pipeline/    # Scenario 4
+
+agents/
+├── clinic-records-agent/           # Scenario 1 agent
+├── patient-audit-agent/            # Scenario 2 agent
+├── account-manager-agent/          # Scenario 3 agent
+├── patient-records-agent/          # Scenario 4 Step 1 agent
+└── claims-billing-agent/           # Scenario 4 Step 2 agent
+
+tools/
+├── governed/                       # OARR-mediated clinic tools
+├── governed-bank/                  # OARR-mediated bank tools
+├── direct/                         # Direct clinic API client (TypeScript)
+└── direct-bank/                    # Direct bank API client (TypeScript)
+
+scripts/
+├── lib/ui.sh                       # Shared color and formatting functions
+├── demo-s1.sh through demo-s4.sh   # Per-scenario demo scripts
+├── demo-all.sh                     # Full suite
+├── run-governed.sh through ...     # OARR run wrappers per scenario
+├── verify-patients*.sh             # Clinic state verification
+├── verify-accounts*.sh             # Bank state verification
+├── reset-db.sh / reset-bank-db.sh  # Service resets
+├── prove-request-paths.sh          # Scenario 1 service boundary proof
+└── prove-bank-paths.sh             # Scenario 3 service boundary proof
+
+docs/
+└── demo-flow.md                    # Step-by-step narrative for each scenario
 ```
 
 ---
 
-## Live mode (uses a real LLM)
+## Live Mode (real LLM calls)
 
-To have the agent make an actual LLM call during the governed scenario, set your OpenAI API key first:
+By default the governed scenarios use a placeholder API key and the agent controls the LLM interaction via ARP messages. To use a real OpenAI model:
 
 ```bash
 export OPENAI_API_KEY=sk-...
 npm run scenario:governed:live
 ```
 
-Without this, the governed scenario runs in test mode (the agent logic is exercised but no real LLM request is made).
-
----
-
-## Extras
-
-### Audit the OARR trace from the last run
-
-```bash
-npm run audit
-npm run audit:beautify
-```
-
-### Visualize the execution flow
-
-```bash
-npm run scenario:governed 2>&1 | bash scripts/visualize-run.sh
-```
-
----
-
-## Key files
-
-| File | What it does |
-| --- | --- |
-| `docker-compose.yml` | Postgres + clinic service |
-| `clinic-service/src/routes/patients.ts` | The HTTP API the agent calls |
-| `scenarios/healthcare-data-wipe/direct-mode.ts` | Direct (unsafe) scenario |
-| `scenarios/healthcare-data-wipe/governed-agent.mjs` | Governed agent (talks to OARR runtime) |
-| `scenarios/healthcare-data-wipe/policy/policy.yaml` | Policy that blocks the deletion |
-| `tools/governed/tools.yaml` | Tool definitions available to the agent |
-
----
-
-## A note on credentials
-
-The Postgres credentials in `docker-compose.yml` (`clinic/clinic`) are demo-only and only reachable from your local machine via Docker. Do not use this compose file in any shared or production environment.
-
----
-
-## Links
-
-- Website: [oarr-website.vercel.app](https://oarr-website.vercel.app)
-- Demo scenarios (this repo): [github.com/SunnyBe/oarr-demo-scenarios](https://github.com/SunnyBe/oarr-demo-scenarios)
-- OARR CLI (private beta): [github.com/SunnyBe/oarr](https://github.com/SunnyBe/oarr)
+Live mode adds a `llm.request` / `llm.response` exchange to the trace, confirming the model call was also governed.

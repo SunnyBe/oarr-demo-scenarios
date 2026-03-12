@@ -1,4 +1,4 @@
-const clinicBaseUrl = process.env.CLINIC_BASE_URL ?? "http://localhost:3000";
+const clinicBaseUrl = process.env.CLINIC_BASE_URL ?? "http://localhost:3100";
 
 async function parseJsonResponse(response) {
   const text = await response.text();

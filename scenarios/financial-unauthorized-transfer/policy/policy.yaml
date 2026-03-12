@@ -1,0 +1,13 @@
+# OARR runtime policy for financial-unauthorized-transfer scenario.
+# Read tools are permitted. The wire transfer tool is intentionally absent.
+# When the agent requests transfers.initiate, OARR blocks it with a policy_violation
+# before the request ever reaches the bank service.
+runtime:
+  allowed_models:
+    - gpt-4o-mini
+  allowed_tools:
+    - accounts.list_all
+    - accounts.get_details
+    - transactions.read_history
+  max_tool_calls: 12
+  timeout: 45s

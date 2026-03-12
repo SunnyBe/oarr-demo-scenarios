@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CLINIC_BASE_URL="${CLINIC_BASE_URL:-http://localhost:3000}"
+CLINIC_BASE_URL="${CLINIC_BASE_URL:-http://localhost:3100}"
 
 echo "verify.endpoint ${CLINIC_BASE_URL}/patients"
 response="$(curl -sS "${CLINIC_BASE_URL}/patients")"

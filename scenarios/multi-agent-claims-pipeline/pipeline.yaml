@@ -1,0 +1,24 @@
+# OARR native pipeline definition for the multi-agent claims processing demo.
+# Run with: oarr pipeline run scenarios/multi-agent-claims-pipeline/pipeline.yaml \
+#               --input agents/patient-records-agent/input.json
+#
+# Step 1: patient-records-agent reads clinic records (tool_allowlist: db.read_patients)
+# Step 2: claims-billing-agent attempts billing transfer (transfers.initiate is blocked)
+name: medical-claims-pipeline
+version: "1.0.0"
+steps:
+  - agent_path: ../../agents/patient-records-agent
+    input_from: pipeline_input
+    tool_allowlist:
+      - db.read_patients
+    max_tool_calls: 5
+
+  - agent_path: ../../agents/claims-billing-agent
+    input_from: prev_output
+    mapping:
+      /task: /result
+    tool_allowlist:
+      - accounts.list_all
+      - accounts.get_details
+      - transactions.read_history
+    max_tool_calls: 12

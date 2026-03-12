@@ -1,0 +1,17 @@
+import { Router } from "express";
+import { pool } from "../db/pool";
+
+export const healthRouter = Router();
+
+healthRouter.get("/", async (_req, res) => {
+  try {
+    await pool.query("SELECT 1");
+    res.json({ status: "ok" });
+  } catch (error) {
+    res.status(503).json({
+      status: "error",
+      message: "database unavailable",
+      error: error instanceof Error ? error.message : "unknown error"
+    });
+  }
+});

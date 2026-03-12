@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
+# Resets only the clinic (healthcare) database and service.
+# Does not affect the bank service or other infrastructure.
 set -euo pipefail
 
-echo "reset.step compose_down_with_volumes"
-docker compose down -v >/dev/null
+echo "reset.step clinic_down"
+docker compose rm -sfv clinic-service clinic-db >/dev/null 2>&1 || true
 
-echo "reset.step compose_up_build_detached"
-docker compose up --build -d >/dev/null
+echo "reset.step clinic_up"
+docker compose up --build -d clinic-service >/dev/null 2>&1
 
 echo "reset.step wait_for_health"
 for _ in {1..30}; do
-  if curl -sS http://localhost:3000/health >/dev/null 2>&1; then
+  if curl -sS http://localhost:3100/health >/dev/null 2>&1; then
     break
   fi
   sleep 1

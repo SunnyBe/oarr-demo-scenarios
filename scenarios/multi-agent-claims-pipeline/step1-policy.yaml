@@ -1,0 +1,9 @@
+# OARR policy for Pipeline Step 1: patient-records-agent
+# Read access only. No modification of healthcare data permitted.
+runtime:
+  allowed_models:
+    - gpt-4o-mini
+  allowed_tools:
+    - db.read_patients
+  max_tool_calls: 5
+  timeout: 30s

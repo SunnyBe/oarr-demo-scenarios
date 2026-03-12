@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "result": {
+      "type": "string",
+      "description": "Summary of retrieved patient records to pass to the next pipeline step."
+    }
+  },
+  "required": ["result"],
+  "additionalProperties": false
+}

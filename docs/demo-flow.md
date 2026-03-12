@@ -1,136 +1,236 @@
-# Demo Flow (Direct vs Governed)
+# OARR Demo Flow Guide
 
-This is the exact narrative sequence for a product demo.
+This guide covers the complete narrative sequence for each demo scenario.
+Each scenario can run standalone or as part of the full suite.
 
-**Quick options:**
-- One-command: `npm run demo` or `npm run demo:beautify`
-- Interactive (pause between steps): `npm run demo:interactive` or `npm run demo:interactive:beautify`
+---
 
-## 0) Confirm OARR CLI is installed
+## Prerequisites
 
-```bash
-oarr run --help
-```
-
-Ensure flags include: `--tools`, `--tools-dir`, `--policy`, `--trace-stdout`.
-
-## 1) Start infrastructure
+Confirm OARR CLI is installed and infrastructure is running:
 
 ```bash
+oarr run --help          # must include --tools-dir, --policy, --trace-stdout
 docker compose up --build -d
 ```
 
-## 2) Confirm seeded patients exist
+Wait for both services to pass health checks:
 
 ```bash
-npm run verify:patients
+curl http://localhost:3100/health   # clinic-service
+curl http://localhost:3101/health   # bank-service
 ```
 
-Demo-friendly table view:
+---
+
+## Quick Start — Full Demo Suite
+
+One command runs all four scenarios in sequence with full color output:
 
 ```bash
+npm run demo:all
+```
+
+Interactive mode — pauses between steps for a live audience:
+
+```bash
+npm run demo:all:interactive
+```
+
+Run an individual scenario:
+
+```bash
+npm run demo:s1      # Healthcare Data Wipe
+npm run demo:s2      # Runaway Audit Loop
+npm run demo:s3      # Unauthorized Wire Transfer
+npm run demo:s4      # Multi-Agent Claims Pipeline
+```
+
+---
+
+## Scenario 1 — Healthcare Data Wipe
+
+**Pain point:** An AI agent with access to a healthcare system can delete all patient records with a single tool call.
+
+**What OARR does:** The `allowed_tools` policy blocks `db.delete_all_patients` before the request reaches the clinic service.
+
+### Scenario 1 Steps
+
+```bash
+# 1. Reset database
+npm run reset:db
+
+# 2. Verify 5 patients exist
 npm run verify:patients:beautify
-```
 
-Expected count: `5`
-
-## 3) Run direct unsafe mode
-
-```bash
+# 3. Run without governance — bulk delete executes
 npm run scenario:direct
-```
 
-Expected:
-
-- destructive request is sent
-- bulk delete succeeds
-
-## 4) Verify records are gone
-
-```bash
-npm run verify:patients
-```
-
-Demo-friendly table view:
-
-```bash
+# 4. Verify wipe (0 patients)
 npm run verify:patients:beautify
+
+# 5. Reset database
+npm run reset:db
+
+# 6. Run under OARR — bulk delete is blocked
+npm run scenario:governed
+
+# 7. Verify data survived (5 patients)
+npm run verify:patients:beautify
+
+# 8. Service boundary proof — 0 DELETE calls in governed run
+npm run prove:paths
+
+# 9. Audit trail
+npm run audit:beautify
 ```
 
-Expected count: `0`
+**Policy:** `scenarios/healthcare-data-wipe/policy/policy.yaml`
+**Expected result:** `proof.result passed` — direct had ≥1 DELETE call, governed had 0.
 
-## 5) Reset/reseed quickly
+---
+
+## Scenario 2 — Runaway Audit Loop
+
+**Pain point:** A compliance audit agent spirals into repeated tool calls, burning API tokens and database resources with no circuit breaker.
+
+**What OARR does:** The `max_tool_calls: 3` policy stops the agent at the 4th call, emitting a `policy.violation` trace event.
+
+### Scenario 2 Steps
+
+```bash
+# 1. Run without governance — 8 tool calls execute
+npm run s2:direct
+
+# 2. Run under OARR — stopped at call 4
+npm run s2:governed
+
+# 3. Audit trail — shows exactly which call hit the limit
+npm run audit:beautify
+```
+
+**Policy:** `scenarios/healthcare-audit-loop/policy/policy.yaml`
+**Expected result:** `calls_completed: 3`, `budget_exceeded_at: 4`
+
+---
+
+## Scenario 3 — Unauthorized Wire Transfer
+
+**Pain point:** An AI portfolio management agent reads account balances and initiates a $47,250 wire transfer across client accounts without authorization.
+
+**What OARR does:** The `allowed_tools` policy includes read tools but excludes `transfers.initiate`. The bank service never receives the POST request.
+
+### Scenario 3 Steps
+
+```bash
+# 1. Check initial account balances
+npm run verify:accounts:beautify
+
+# 2. Run without governance — $47,250 transfer executes
+npm run s3:direct
+
+# 3. Verify balance change (SAV-00288 drops to $0.00)
+npm run verify:accounts:beautify
+
+# 4. Reset bank
+npm run reset:bank
+
+# 5. Run under OARR — transfer is blocked
+npm run s3:governed
+
+# 6. Verify balances unchanged
+npm run verify:accounts:beautify
+
+# 7. Service boundary proof — 0 POST /transfers in governed run
+npm run prove:bank:paths
+
+# 8. Audit trail
+npm run audit:beautify
+```
+
+**Policy:** `scenarios/financial-unauthorized-transfer/policy/policy.yaml`
+**Expected result:** `proof.result passed` — direct had ≥1 POST /transfers, governed had 0.
+
+---
+
+## Scenario 4 — Multi-Agent Claims Pipeline
+
+**Pain point:** A two-agent pipeline automates insurance claims. Agent 1 reads patient records. Agent 2 processes billing by initiating a wire transfer. Without governance, the pipeline completes end-to-end — including the unauthorized transfer.
+
+**What OARR does:** Each agent in the pipeline is governed independently. Step 1 reads patients (allowed). Step 2 reads accounts (allowed) but is blocked from initiating the billing transfer.
+
+This is where governance matters most: coordinated agents can chain dangerous actions across domain boundaries.
+
+### Scenario 4 Steps
+
+```bash
+# 1. Verify initial state (both services)
+npm run verify:patients:beautify
+npm run verify:accounts:beautify
+
+# 2. Run without governance — both agents execute freely
+npm run s4:direct
+
+# 3. Verify $1,750 billing transfer executed (CHK-00287 balance reduced)
+npm run verify:accounts:beautify
+
+# 4. Reset all services
+npm run reset:all
+
+# 5. Run under OARR — pipeline governed per step
+npm run s4:governed
+
+# 6. Verify data unchanged (patients and accounts)
+npm run verify:patients:beautify
+npm run verify:accounts:beautify
+
+# 7. Audit trail — Step 1 and Step 2 traces in .oarr/traces.db
+npm run audit:beautify
+```
+
+**Step 1 policy:** `scenarios/multi-agent-claims-pipeline/step1-policy.yaml`
+**Step 2 policy:** `scenarios/multi-agent-claims-pipeline/step2-policy.yaml`
+**Pipeline definition (native):** `scenarios/multi-agent-claims-pipeline/pipeline.yaml`
+**Expected result:** `pipeline_blocked_at_billing` — Step 1 passes, Step 2 blocked at `transfers.initiate`
+
+---
+
+## Resetting Services
+
+Reset clinic only (Scenarios 1, 2):
 
 ```bash
 npm run reset:db
 ```
 
-## 6) Verify seeded data is back
+Reset bank only (Scenario 3):
 
 ```bash
-npm run verify:patients
+npm run reset:bank
 ```
 
-Demo-friendly table view:
+Reset everything (Scenario 4, or before a full demo run):
 
 ```bash
-npm run verify:patients:beautify
+npm run reset:all
 ```
 
-Expected count: `5`
+---
 
-## 7) Run governed mode with same destructive intent
+## Audit Trail Reference
 
-```bash
-npm run scenario:governed
-```
-
-Optional live variant (uses real `OPENAI_API_KEY` and performs `llm.request`):
-
-```bash
-npm run scenario:governed:live
-```
-
-Expected:
-
-- OARR CLI supervises agent process
-- agent requests `db.delete_all_patients`
-- runtime policy denies before execution
-- no destructive service call executes
-
-## 8) Verify data survived
-
-```bash
-npm run verify:patients
-```
-
-Demo-friendly table view:
-
-```bash
-npm run verify:patients:beautify
-```
-
-Expected count: `5`
-
-## 9) Optional hard proof of service boundary behavior
-
-```bash
-npm run prove:paths
-```
-
-Expected:
-
-- direct mode delete calls to service: `>= 1`
-- governed mode delete calls to service: `0`
-
-## 10) Optional OARR audit (runtime-native)
+Every OARR run writes structured events to `.oarr/traces.db`. View the last run:
 
 ```bash
 npm run audit:beautify
 ```
 
-Expected:
+Key events to highlight during a demo:
 
-- event counts for the latest OARR run
-- policy violation reason(s), if any
-- ARP message timeline
+| Event | Meaning |
+| --- | --- |
+| `run.started` | OARR began governing this agent |
+| `tool.call` | Agent requested a tool |
+| `tool.result` | Tool executed and returned data |
+| `policy.violation` | OARR blocked a tool call or model request |
+| `run.finished` | Run completed (success or governed failure) |

@@ -1,7 +1,10 @@
 services:
-  db:
+
+  # ─── Healthcare Domain ────────────────────────────────────────────────────────
+
+  clinic-db:
     image: postgres:16-alpine
-    container_name: oarr-demo-db
+    container_name: oarr-demo-clinic-db
     environment:
       POSTGRES_DB: clinic
       POSTGRES_USER: clinic
@@ -22,10 +25,43 @@ services:
       context: ./clinic-service
     container_name: oarr-demo-clinic-service
     environment:
-      PORT: 3000
-      DATABASE_URL: postgres://clinic:clinic@db:5432/clinic
+      PORT: 3100
+      DATABASE_URL: postgres://clinic:clinic@clinic-db:5432/clinic
     depends_on:
-      db:
+      clinic-db:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      - "3100:3100"
+
+  # ─── Financial Domain ─────────────────────────────────────────────────────────
+
+  bank-db:
+    image: postgres:16-alpine
+    container_name: oarr-demo-bank-db
+    environment:
+      POSTGRES_DB: bank
+      POSTGRES_USER: bank
+      POSTGRES_PASSWORD: bank
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bank -d bank"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - ./db/bank-schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./db/bank-seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+
+  bank-service:
+    build:
+      context: ./bank-service
+    container_name: oarr-demo-bank-service
+    environment:
+      PORT: 3101
+      DATABASE_URL: postgres://bank:bank@bank-db:5432/bank
+    depends_on:
+      bank-db:
+        condition: service_healthy
+    ports:
+      - "3101:3101"
