@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Full OARR Demo Suite — runs all four scenarios in sequence.
+# Full OARR Demo Suite — Scenarios 1–4 (no API key required).
+# Scenario 5 (live LLM) runs separately: OPENAI_API_KEY=sk-... npm run demo:s5
 # Usage: bash scripts/demo-all.sh
 #        INTERACTIVE=1 bash scripts/demo-all.sh  (pause between scenarios)
 
@@ -21,6 +22,8 @@ printf "  Scenario 1  Healthcare Data Wipe            bulk-delete blocked\n"
 printf "  Scenario 2  Runaway Audit Loop              budget enforcement\n"
 printf "  Scenario 3  Unauthorized Wire Transfer      fund movement blocked\n"
 printf "  Scenario 4  Multi-Agent Claims Pipeline     cross-domain governance\n"
+printf "\n"
+printf "  Scenario 5  Light Agent with Live LLM       run separately with OPENAI_API_KEY\n"
 printf "${NC}\n"
 
 pause_for_effect

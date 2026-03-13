@@ -2,13 +2,15 @@
 
 > This is a local demo environment. Everything runs on your machine inside Docker. No data leaves your system.
 
-This repository contains four production-grade demo scenarios that prove what OARR — Open Agent Runtime & Registry — does when AI agents operate on real systems.
+This repository contains five demo scenarios that prove what OARR — Open Agent Runtime & Registry — does when AI agents operate on real systems.
 
 Each scenario shows the same pattern: the agent runs once without governance (the damage happens), then again under OARR (the damage is blocked). The proof is always structural — Docker logs, database state, and OARR's own audit trail confirm what occurred.
 
+See [docs/architecture.md](docs/architecture.md) for the agent–harness–tools–services diagram.
+
 ---
 
-## The Four Scenarios
+## The Five Scenarios
 
 ### Scenario 1 — Healthcare Data Wipe
 
@@ -33,6 +35,12 @@ A portfolio management agent reads client account balances and initiates a $47,2
 A hospital deploys a two-agent pipeline to automate insurance claims. Agent 1 reads patient records from the clinic system. Agent 2 receives that data and initiates a $1,750 billing transfer. Without governance, the pipeline completes end-to-end. Under OARR, each agent is governed independently: Step 1 passes, Step 2 is blocked at the billing transfer call.
 
 **What it demonstrates:** Cross-domain, multi-agent governance. OARR applies policy per agent and per step — even in coordinated pipelines that span domain boundaries.
+
+### Scenario 5 — Light Agent with Live LLM
+
+A real AI agent: an LLM reasons, selects tools, appends results to memory, and loops until the goal is met or the budget is exhausted. This is the closest scenario to a production AI system. Under OARR, both `llm.request` and `tool.call` flow through the governance layer — the model choice and tool budget are both enforced. Requires a real OpenAI API key.
+
+**What it demonstrates:** Full runtime governance of a real LLM-based agent. Not a scripted simulation — actual model reasoning and tool selection, mediated by OARR.
 
 ---
 
@@ -91,7 +99,7 @@ curl http://localhost:3101/health   # bank-service
 
 ## Running the Demo
 
-### Full suite — all four scenarios
+### Full suite — Scenarios 1–4 (no API key required)
 
 ```bash
 npm run demo:all
@@ -110,6 +118,7 @@ npm run demo:s1              # Healthcare Data Wipe
 npm run demo:s2              # Runaway Audit Loop
 npm run demo:s3              # Unauthorized Wire Transfer
 npm run demo:s4              # Multi-Agent Claims Pipeline
+OPENAI_API_KEY=sk-... npm run demo:s5   # Light Agent with Live LLM (requires real key)
 ```
 
 Add `:interactive` to any scenario for a paused, step-by-step experience:
@@ -188,8 +197,8 @@ Expected: direct run ≥1 call, governed run 0 calls.
 
 | Service | Port | Purpose |
 | --- | --- | --- |
-| clinic-service | 3000 | Express + Postgres — patient records API |
-| bank-service | 3001 | Express + Postgres — accounts and transfers API |
+| clinic-service | 3100 | Express + Postgres — patient records API |
+| bank-service | 3101 | Express + Postgres — accounts and transfers API |
 | clinic-db | 5432 | Postgres 16 — 5 seeded patient records |
 | bank-db | 5433 | Postgres 16 — 6 seeded accounts, transaction history |
 

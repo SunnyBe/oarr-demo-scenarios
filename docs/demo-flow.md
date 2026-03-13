@@ -3,6 +3,8 @@
 This guide covers the complete narrative sequence for each demo scenario.
 Each scenario can run standalone or as part of the full suite.
 
+For the architecture of agent, harness, tools, and services, see [architecture.md](./architecture.md).
+
 ---
 
 ## Prerequisites
@@ -192,6 +194,35 @@ npm run audit:beautify
 **Step 2 policy:** `scenarios/multi-agent-claims-pipeline/step2-policy.yaml`
 **Pipeline definition (native):** `scenarios/multi-agent-claims-pipeline/pipeline.yaml`
 **Expected result:** `pipeline_blocked_at_billing` — Step 1 passes, Step 2 blocked at `transfers.initiate`
+
+---
+
+## Scenario 5 — Light Agent with Live LLM (scaffold)
+
+**Purpose:** The ultimate proof of OARR — a real LLM-based agent with small memory running through the runtime. Uses a live OpenAI API key and dev services.
+
+**What it demonstrates:** A light agent (LLM reasoning, tool selection, conversation memory) operating under OARR. Both `llm.request` and `tool.call` flow through the harness; policy governs model and tool usage.
+
+**Status:** Scaffold only. See `scenarios/light-agent-live/SCENARIO.md` for implementation plan.
+
+### Scenario 5 Steps (once implemented)
+
+```bash
+# 1. Set live API key and ensure services are running
+export OPENAI_API_KEY=sk-...
+docker compose up -d
+
+# 2. Run direct mode — agent calls OpenAI and services directly (no harness)
+npm run s5:direct
+
+# 3. Run governed mode — agent runs under OARR, all calls mediated
+npm run s5:governed
+
+# 4. Audit trail — llm.request, tool.call, policy.violation events
+npm run audit:beautify
+```
+
+**Policy:** `scenarios/light-agent-live/policy/policy.yaml` — allows `db.read_patients`, `max_tool_calls: 5`.
 
 ---
 

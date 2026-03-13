@@ -1,0 +1,9 @@
+# OARR policy for Scenario 5: Light Agent with Live LLM
+# Read-only tools, budget enforced. Proves governance of real LLM + tool-use loop.
+runtime:
+  allowed_models:
+    - gpt-4o-mini
+  allowed_tools:
+    - db.read_patients
+  max_tool_calls: 5
+  timeout: 60s

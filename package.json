@@ -30,6 +30,9 @@
     "s4:direct": "tsx scenarios/multi-agent-claims-pipeline/direct-mode.ts",
     "s4:governed": "bash scripts/run-governed-s4.sh",
 
+    "s5:direct": "tsx scenarios/light-agent-live/direct-mode.ts",
+    "s5:governed": "bash scripts/run-governed-s5.sh",
+
     "demo:s1": "INTERACTIVE=0 bash scripts/demo-s1.sh",
     "demo:s1:interactive": "INTERACTIVE=1 bash scripts/demo-s1.sh",
     "demo:s2": "INTERACTIVE=0 bash scripts/demo-s2.sh",
@@ -38,8 +41,13 @@
     "demo:s3:interactive": "INTERACTIVE=1 bash scripts/demo-s3.sh",
     "demo:s4": "INTERACTIVE=0 bash scripts/demo-s4.sh",
     "demo:s4:interactive": "INTERACTIVE=1 bash scripts/demo-s4.sh",
+    "demo:s5": "INTERACTIVE=0 bash scripts/demo-s5.sh",
+    "demo:s5:interactive": "INTERACTIVE=1 bash scripts/demo-s5.sh",
     "demo:all": "INTERACTIVE=0 bash scripts/demo-all.sh",
     "demo:all:interactive": "INTERACTIVE=1 bash scripts/demo-all.sh"
+  },
+  "dependencies": {
+    "openai": "^4.73.0"
   },
   "devDependencies": {
     "@types/node": "^24.5.2",
